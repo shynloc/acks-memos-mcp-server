@@ -82,7 +82,31 @@ export const ADMIN_HTML = `
         <!-- Header -->
         <div class="mb-10 text-center">
             <h1 class="text-4xl font-extrabold tracking-tight mb-2 bg-gradient-to-r from-brand-500 to-pink-500 text-transparent bg-clip-text">ACKS Memos MCP</h1>
-            <p class="text-gray-400 text-lg">AI Assistant Control Panel & Permission Manager</p>
+            <p class="text-gray-400">Secure configuration panel for your AI Agent connector</p>
+        </div>
+
+        <!-- Connection URL Card -->
+        <div class="glass-panel p-6 rounded-2xl border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)] mb-8 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <svg class="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+            </div>
+            <h2 class="text-xl font-bold mb-2 flex items-center text-emerald-400">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                Your AI Connection URL
+            </h2>
+            <p class="text-gray-400 text-sm mb-4 pr-12">Copy this URL and paste it into your MCP client (Grok, Claude Desktop, Cursor) to securely connect to your Memos.</p>
+            
+            <div class="flex items-center bg-gray-950/80 rounded-xl p-1 border border-gray-700 shadow-inner group/input">
+                <input type="text" id="clientUrlInput" readonly class="bg-transparent w-full px-4 py-3 text-emerald-100 font-mono text-sm focus:outline-none selection:bg-emerald-500/30" value="Loading...">
+                <button id="copyUrlBtn" type="button" class="flex-shrink-0 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium py-2 px-4 rounded-lg shadow transition-colors focus:outline-none border border-gray-600 mr-1 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    Copy
+                </button>
+            </div>
+            <p class="text-xs text-rose-400/80 mt-3 flex items-center font-medium">
+                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                Treat this URL like a password. Do not share it publicly.
+            </p>
         </div>
 
         <!-- Notification Toast -->
@@ -222,6 +246,21 @@ export const ADMIN_HTML = `
             loadConfig();
         });
 
+        // Copy URL Logic
+        document.getElementById('copyUrlBtn').addEventListener('click', () => {
+            const input = document.getElementById('clientUrlInput');
+            input.select();
+            input.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(input.value);
+            
+            const btn = document.getElementById('copyUrlBtn');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<svg class="w-4 h-4 mr-1 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span class="text-emerald-400">Copied!</span>';
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+            }, 2000);
+        });
+
         // Fetch current config
         async function loadConfig() {
             try {
@@ -238,6 +277,11 @@ export const ADMIN_HTML = `
                 
                 hideLogin();
                 const config = await res.json();
+                
+                // Set Client URL
+                const baseUrl = window.location.origin + window.location.pathname.replace(/\/admin\/?$/, '');
+                const clientToken = config.security && config.security.client_token ? config.security.client_token : 'MISSING_TOKEN';
+                document.getElementById('clientUrlInput').value = baseUrl + '/sse?token=' + clientToken;
                 
                 // Render Tools
                 toolsContainer.innerHTML = '';

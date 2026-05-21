@@ -38,12 +38,11 @@ if (isSseMode) {
   // Client Auth Middleware for SSE endpoints
   const clientAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     // For POST /messages, the dynamically generated UUID sessionId acts as a secure session token.
-    // The client only gets the sessionId if they successfully authenticated the initial GET /sse request.
     if (req.path.endsWith("/messages") && req.method === "POST" && req.query.sessionId) {
       return next();
     }
 
-    const expectedToken = process.env.MCP_CLIENT_TOKEN;
+    const expectedToken = configManager.getConfig().security?.client_token || process.env.MCP_CLIENT_TOKEN;
     if (!expectedToken) {
       console.warn("WARNING: MCP_CLIENT_TOKEN is not set. SSE endpoints are exposed publicly!");
       return next();

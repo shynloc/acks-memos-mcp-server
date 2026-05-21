@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import crypto from "crypto";
 
 export interface McpConfig {
   tools: {
@@ -14,6 +15,9 @@ export interface McpConfig {
   };
   search: {
     enable_vector_search: boolean;
+  };
+  security: {
+    client_token: string;
   };
 }
 
@@ -31,6 +35,9 @@ const DEFAULT_CONFIG: McpConfig = {
   search: {
     enable_vector_search: false,
   },
+  security: {
+    client_token: "", // Will be auto-populated on startup
+  }
 };
 
 export class ConfigManager {
@@ -55,14 +62,24 @@ export class ConfigManager {
       this.config = {
         tools: { ...DEFAULT_CONFIG.tools, ...(parsed.tools || {}) },
         search: { ...DEFAULT_CONFIG.search, ...(parsed.search || {}) },
+        security: { ...DEFAULT_CONFIG.security, ...(parsed.security || {}) },
       };
+      
+      // Auto-generate client token if it doesn't exist
+      if (!this.config.security.client_token) {
+        this.config.security.client_token = "acks_" + crypto.randomBytes(16).toString("hex");
+        await this.save();
+      }
+      
     } catch (error: any) {
       if (error.code === "ENOENT") {
         // File doesn't exist, create it with safe defaults
+        this.config.security.client_token = "acks_" + crypto.randomBytes(16).toString("hex");
         await this.save();
       } else {
         console.error(`[ConfigManager] Warning: Failed to parse config file, falling back to safe defaults. Error: ${error.message}`);
         this.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+        this.config.security.client_token = "acks_" + crypto.randomBytes(16).toString("hex");
       }
     }
     return this.config;
