@@ -6,10 +6,15 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { createMemosMcpServer } from "./server.js";
+import { ConfigManager } from "./config.js";
 
 dotenv.config();
 
 const isSseMode = process.argv.includes("--sse") || process.env.TRANSPORT?.toLowerCase() === "sse";
+
+// Load configurations at startup
+const configManager = new ConfigManager();
+await configManager.load();
 
 if (isSseMode) {
   // SSE HTTP Server Mode
@@ -43,7 +48,7 @@ if (isSseMode) {
     transports.set(sessionId, transport);
 
     // Create a dedicated MCP Server instance for this session to avoid multi-client conflicts
-    const server = createMemosMcpServer();
+    const server = await createMemosMcpServer(configManager);
 
     res.on("close", () => {
       console.error(`SSE connection closed for session: ${sessionId}`);
@@ -87,6 +92,20 @@ if (isSseMode) {
     }
   });
 
+  // Admin API endpoints (SSE mode)
+  app.get("/admin/api/config", (req, res) => {
+    res.json(configManager.getConfig());
+  });
+  
+  app.post("/admin/api/config", async (req, res) => {
+    try {
+      const updated = await configManager.update(req.body);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   const port = parseInt(process.env.PORT || "3000", 10);
   const host = process.env.HOST || "0.0.0.0";
 
@@ -94,10 +113,11 @@ if (isSseMode) {
     console.error(`ACKS Memos MCP Server running in SSE mode`);
     console.error(`Health check: http://${host === "0.0.0.0" ? "localhost" : host}:${port}/health`);
     console.error(`SSE endpoint: http://${host === "0.0.0.0" ? "localhost" : host}:${port}/sse (or /mcp/sse)`);
+    console.error(`Admin Panel API: http://${host === "0.0.0.0" ? "localhost" : host}:${port}/admin/api/config`);
   });
 } else {
   // Stdio Mode (Standard CLI)
-  const server = createMemosMcpServer();
+  const server = await createMemosMcpServer(configManager);
   const transport = new StdioServerTransport();
   
   server.connect(transport).then(() => {
@@ -105,5 +125,28 @@ if (isSseMode) {
   }).catch((err) => {
     console.error("Failed to run ACKS Memos MCP Server in Stdio mode:", err);
     process.exit(1);
+  });
+
+  // Launch background Admin Panel server for Stdio mode
+  const adminApp = express();
+  adminApp.use(cors());
+  adminApp.use(express.json());
+  
+  adminApp.get("/admin/api/config", (req, res) => {
+    res.json(configManager.getConfig());
+  });
+  
+  adminApp.post("/admin/api/config", async (req, res) => {
+    try {
+      const updated = await configManager.update(req.body);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  const adminPort = parseInt(process.env.ADMIN_PORT || "3001", 10);
+  adminApp.listen(adminPort, "127.0.0.1", () => {
+    console.error(`[Admin Panel] Web UI backend running at http://127.0.0.1:${adminPort}/admin (Stdio mode)`);
   });
 }

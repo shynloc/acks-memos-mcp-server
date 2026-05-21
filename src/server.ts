@@ -6,8 +6,9 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { MemosClient } from "./memos.js";
+import { ConfigManager } from "./config.js";
 
-export function createMemosMcpServer(): Server {
+export async function createMemosMcpServer(configManager: ConfigManager): Promise<Server> {
   const server = new Server(
     {
       name: "acks-memos-mcp-server",
@@ -70,8 +71,7 @@ export function createMemosMcpServer(): Server {
 
   // Register Tools
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-      tools: [
+    const allTools = [
         {
           name: "create_memo",
           description: "Create a new memo note in your self-hosted Memos instance.",
@@ -193,14 +193,35 @@ export function createMemosMcpServer(): Server {
             type: "object",
             properties: {},
           },
-        },
-      ],
+        }
+    ];
+
+    const currentConfig = configManager.getConfig();
+    const activeTools = allTools.filter(tool => currentConfig.tools[tool.name] === true);
+
+    return {
+      tools: activeTools,
     };
   });
 
   // Call Tool Handlers
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+    
+    // Security Check: Ensure tool is enabled in configuration
+    const currentConfig = configManager.getConfig();
+    if (!currentConfig.tools[name]) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: `Access Denied: The tool '${name}' is currently disabled in the ACKS Memos MCP Server configuration. Please enable it in the Web Admin Panel or config file to use it.`,
+          },
+        ],
+      };
+    }
+
     const client = getClient();
 
     try {
