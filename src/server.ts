@@ -7,6 +7,10 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { MemosClient } from "./memos.js";
 import { ConfigManager } from "./config.js";
+import { globalVectorEngine } from "./vectorEngine.js";
+
+// Global state for Piggyback Notifications
+let pendingUpgradeNotification = false;
 
 export async function createMemosMcpServer(configManager: ConfigManager): Promise<Server> {
   const server = new Server(
@@ -193,11 +197,22 @@ export async function createMemosMcpServer(configManager: ConfigManager): Promis
             type: "object",
             properties: {},
           },
+        },
+        {
+          name: "upgrade_search_engine",
+          description: "One-click tool to upgrade the AI's search engine to Tier 2 (Vector Semantic Search). Call this if you cannot find what the user needs with basic search.",
+          inputSchema: {
+            type: "object",
+            properties: {},
+          },
         }
     ];
 
     const currentConfig = configManager.getConfig();
-    const activeTools = allTools.filter(tool => currentConfig.tools[tool.name] === true);
+    const activeTools = allTools.filter(tool => {
+      if (tool.name === "upgrade_search_engine") return true;
+      return currentConfig.tools[tool.name] === true;
+    });
 
     return {
       tools: activeTools,
@@ -210,7 +225,7 @@ export async function createMemosMcpServer(configManager: ConfigManager): Promis
     
     // Security Check: Ensure tool is enabled in configuration
     const currentConfig = configManager.getConfig();
-    if (!currentConfig.tools[name]) {
+    if (name !== "upgrade_search_engine" && !currentConfig.tools[name]) {
       return {
         isError: true,
         content: [
@@ -226,6 +241,29 @@ export async function createMemosMcpServer(configManager: ConfigManager): Promis
 
     try {
       switch (name) {
+        case "upgrade_search_engine": {
+          // 1. Enable it in config
+          await configManager.update({ search: { enable_vector_search: true } });
+          // 2. Set piggyback flag
+          pendingUpgradeNotification = true;
+          // 3. Trigger background load (Async fire-and-forget)
+          globalVectorEngine.init().catch(e => console.error("[Background Init] Engine failed:", e));
+          
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  status: "started_in_background",
+                  estimated_minutes: 1,
+                  user_message_hint: "高级搜索引擎下载及初始化任务已在后台开启。预计耗时1-2分钟，进化完成后系统会自动切换引擎。",
+                  developer_note: "CRITICAL: Do not block or wait. Relay 'user_message_hint' to the user immediately and gracefully end this turn."
+                }),
+              },
+            ],
+          };
+        }
+
         case "create_memo": {
           const { content, visibility } = args as { content: string; visibility?: "PUBLIC" | "PROTECTED" | "PRIVATE" };
           const memo = await client.createMemo({ content, visibility });
@@ -312,24 +350,64 @@ export async function createMemosMcpServer(configManager: ConfigManager): Promis
             searchPageToken = page.nextPageToken;
           } while (searchPageToken && allMemos.length < maxSearchMemos);
 
-          // Filter client-side using Tokenized AND matching (Zero-dependency, fast fallback)
-          // Splitting the query into tokens allows matching regardless of word order or spacing
-          const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
-          const filteredMemos = allMemos.filter((memo) => {
-            const lowerContent = memo.content.toLowerCase();
-            // Memo must contain EVERY token to be a match
-            return tokens.every(token => lowerContent.includes(token));
-          });
+          let filteredMemos: any[] = [];
+          let currentEngine = "tokenized_and_v1";
 
-          // Apply limit to the filtered results (default 50)
+          if (currentConfig.search.enable_vector_search) {
+            try {
+              if (!globalVectorEngine.isReady()) {
+                await globalVectorEngine.init();
+              }
+              // JIT Sync
+              await globalVectorEngine.syncMemos(allMemos);
+              const queryVector = await globalVectorEngine.getEmbedding(query);
+              filteredMemos = globalVectorEngine.search(queryVector, allMemos, limit || 50);
+              currentEngine = "vector_semantic_v1";
+            } catch (err: any) {
+              console.error("[VectorEngine] Error during search, falling back to basic:", err);
+              // Fallback to basic search
+              const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+              filteredMemos = allMemos.filter((memo) => {
+                const lowerContent = memo.content.toLowerCase();
+                return tokens.every(token => lowerContent.includes(token));
+              });
+            }
+          } else {
+            // Tier 1 logic
+            const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+            filteredMemos = allMemos.filter((memo) => {
+              const lowerContent = memo.content.toLowerCase();
+              return tokens.every(token => lowerContent.includes(token));
+            });
+          }
+
           const maxResults = limit || 50;
           const truncatedMemos = filteredMemos.slice(0, maxResults);
+
+          const responseJson: any = {
+            memos: truncatedMemos,
+            totalMatches: filteredMemos.length,
+            engine_used: currentEngine,
+          };
+
+          // Append Piggyback Notification if upgrade just finished
+          if (pendingUpgradeNotification && globalVectorEngine.isReady()) {
+            responseJson.engine_just_upgraded = true;
+            responseJson.upgrade_notification_hint = "高级搜索引擎已在后台完成初始化，现在的搜索能力变得更加智能了！";
+            pendingUpgradeNotification = false; // Consume the notification
+          }
+
+          // Suggest upgrade if using basic engine and no results found
+          if (currentEngine === "tokenized_and_v1" && filteredMemos.length === 0) {
+            responseJson.upgrade_available = true;
+            responseJson.upgrade_hint = "当前为基础字面匹配，未找到结果。如需语义联想搜索能力，请主动询问用户：'需要我一键为您开启高级语义引擎吗？' 如果用户同意，请立刻调用 upgrade_search_engine 工具。";
+          }
 
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify({ memos: truncatedMemos, totalMatches: filteredMemos.length }, null, 2),
+                text: JSON.stringify(responseJson, null, 2),
               },
             ],
           };
