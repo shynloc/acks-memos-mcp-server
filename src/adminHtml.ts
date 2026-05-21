@@ -342,8 +342,8 @@ export const ADMIN_HTML = `
                 // Set Client URL & Cheat Sheet
                 const baseUrl = window.location.origin + window.location.pathname.replace(new RegExp('/admin/?$'), '');
                 const clientToken = config.security && config.security.client_token ? config.security.client_token : 'MISSING_TOKEN';
-                document.getElementById('clientUrlInput').value = baseUrl + '/sse?token=' + clientToken;
-                document.getElementById('cheatBaseUrl').textContent = baseUrl + '/sse';
+                document.getElementById('clientUrlInput').value = baseUrl + '/sse/' + clientToken;
+                document.getElementById('cheatBaseUrl').textContent = baseUrl + '/sse/' + clientToken;
                 document.getElementById('cheatToken').textContent = clientToken;
                 document.getElementById('cheatHeaderToken').textContent = clientToken;
                 

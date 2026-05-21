@@ -49,7 +49,11 @@ if (isSseMode) {
       return next();
     }
 
-    const providedToken = req.query.token || req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    // Support token in query (?token=xxx), Header (Bearer xxx), or Path (/sse/xxx)
+    const pathTokenMatch = req.path.match(/\/sse\/([a-zA-Z0-9_]+)/);
+    const pathToken = pathTokenMatch ? pathTokenMatch[1] : null;
+
+    const providedToken = req.query.token || req.headers.authorization?.replace(/^Bearer\s+/i, '') || pathToken;
 
     if (providedToken !== expectedToken) {
       console.error(`[Security] Blocked unauthorized access attempt to ${req.path} from IP: ${req.ip}`);
@@ -61,10 +65,11 @@ if (isSseMode) {
   };
 
   // Handle SSE Connection
-  // Supports wildcard paths so that it works with or without path prefixes (e.g. /sse, /mcp/sse)
-  app.get("*/sse", clientAuth, async (req, res) => {
-    const reqPath = req.path; // e.g. "/sse" or "/mcp/sse"
-    const prefix = reqPath.substring(0, reqPath.lastIndexOf("/sse"));
+  // Supports wildcard paths so that it works with or without path prefixes (e.g. /sse, /mcp/sse, /mcp/sse/token)
+  app.get("*/sse*", clientAuth, async (req, res) => {
+    const reqPath = req.path; // e.g. "/sse" or "/mcp/sse/acks_123"
+    const prefixMatch = reqPath.match(/^(.*)\/sse/);
+    const prefix = prefixMatch ? prefixMatch[1] : "";
     const messagesPath = `${prefix}/messages`;
 
     console.error(`New SSE connection request at path: ${reqPath}. Messaging endpoint set to: ${messagesPath}`);
