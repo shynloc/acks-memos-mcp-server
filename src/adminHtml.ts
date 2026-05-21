@@ -144,10 +144,18 @@ export const ADMIN_HTML = `
         const toast = document.getElementById('toast');
         const saveBtn = document.getElementById('saveBtn');
 
+        // Dynamically compute API URL based on current path to support reverse proxy sub-paths (like /mcp/admin)
+        const getApiUrl = () => {
+            const path = window.location.pathname;
+            // If path ends with /, strip it
+            const cleanPath = path.endsWith('/') ? path.slice(0, -1) : path;
+            return cleanPath + '/api/config';
+        };
+
         // Fetch current config
         async function loadConfig() {
             try {
-                const res = await fetch('/admin/api/config');
+                const res = await fetch(getApiUrl());
                 const config = await res.json();
                 
                 // Render Tools
@@ -226,7 +234,7 @@ export const ADMIN_HTML = `
             });
 
             try {
-                const res = await fetch('/admin/api/config', {
+                const res = await fetch(getApiUrl(), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(newConfig)
