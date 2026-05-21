@@ -68,9 +68,8 @@ if (isSseMode) {
   // Supports wildcard paths so that it works with or without path prefixes (e.g. /sse, /mcp/sse, /mcp/sse/token)
   app.get("*/sse*", clientAuth, async (req, res) => {
     const reqPath = req.path; // e.g. "/sse" or "/mcp/sse/acks_123"
-    const prefixMatch = reqPath.match(/^(.*)\/sse/);
-    const prefix = prefixMatch ? prefixMatch[1] : "";
-    const messagesPath = `${prefix}/messages`;
+    // To satisfy strict clients, make the messages endpoint a direct subpath of the SSE connection path
+    const messagesPath = `${reqPath}/messages`;
     
     // Construct absolute URL for strict clients (like Grok) that don't support relative endpoint URIs
     const host = req.get('x-forwarded-host') || req.get('host');
