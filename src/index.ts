@@ -71,10 +71,15 @@ if (isSseMode) {
     const prefixMatch = reqPath.match(/^(.*)\/sse/);
     const prefix = prefixMatch ? prefixMatch[1] : "";
     const messagesPath = `${prefix}/messages`;
+    
+    // Construct absolute URL for strict clients (like Grok) that don't support relative endpoint URIs
+    const host = req.get('x-forwarded-host') || req.get('host');
+    const protocol = req.get('x-forwarded-proto') || req.protocol;
+    const absoluteMessagesPath = `${protocol}://${host}${messagesPath}`;
 
-    console.error(`New SSE connection request at path: ${reqPath}. Messaging endpoint set to: ${messagesPath}`);
+    console.error(`New SSE connection request at path: ${reqPath}. Messaging endpoint set to: ${absoluteMessagesPath}`);
 
-    const transport = new SSEServerTransport(messagesPath, res);
+    const transport = new SSEServerTransport(absoluteMessagesPath, res);
     const sessionId = transport.sessionId;
     transports.set(sessionId, transport);
 
