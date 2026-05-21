@@ -101,6 +101,8 @@ if (isSseMode) {
   // Handle incoming messages
   app.post("*/messages", clientAuth, async (req, res) => {
     const sessionId = req.query.sessionId as string;
+    console.error(`[POST /messages] Request received. sessionId: ${sessionId}`);
+    
     if (!sessionId) {
       res.status(400).send("Missing sessionId query parameter");
       return;
@@ -108,12 +110,13 @@ if (isSseMode) {
 
     const transport = transports.get(sessionId);
     if (!transport) {
-      console.error(`Message post failed: no active session found for ID ${sessionId}`);
+      console.error(`[POST /messages] Failed: no active session found for ID ${sessionId}`);
       res.status(404).send("Session not found or expired");
       return;
     }
 
     try {
+      console.error(`[POST /messages] Body snippet: ${JSON.stringify(req.body || {}).substring(0, 150)}`);
       await transport.handlePostMessage(req, res, req.body);
     } catch (err: any) {
       console.error(`Error handling message: ${err.message}`);
