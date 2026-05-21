@@ -291,11 +291,14 @@ export function createMemosMcpServer(): Server {
             searchPageToken = page.nextPageToken;
           } while (searchPageToken && allMemos.length < maxSearchMemos);
 
-          // Filter client-side for substring matching
-          const lowerQuery = query.toLowerCase();
-          const filteredMemos = allMemos.filter((memo) =>
-            memo.content.toLowerCase().includes(lowerQuery)
-          );
+          // Filter client-side using Tokenized AND matching (Zero-dependency, fast fallback)
+          // Splitting the query into tokens allows matching regardless of word order or spacing
+          const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+          const filteredMemos = allMemos.filter((memo) => {
+            const lowerContent = memo.content.toLowerCase();
+            // Memo must contain EVERY token to be a match
+            return tokens.every(token => lowerContent.includes(token));
+          });
 
           // Apply limit to the filtered results (default 50)
           const maxResults = limit || 50;
