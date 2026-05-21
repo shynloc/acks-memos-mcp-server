@@ -299,21 +299,20 @@ export const ADMIN_HTML = `
                     if (meta.color === "yellow") dotColor = "bg-yellow-500";
                     if (meta.color === "red") dotColor = "bg-red-500";
 
-                    const html = \`
-                        <div class="flex items-center justify-between p-4 bg-gray-900/40 rounded-xl hover:bg-gray-800/60 transition-colors">
-                            <div class="flex items-start">
-                                <div class="mt-1.5 mr-3 w-2.5 h-2.5 rounded-full \${dotColor} shadow-[0_0_8px_rgba(var(--tw-colors-\${meta.color}-500),0.8)]"></div>
-                                <div>
-                                    <div class="text-white font-medium">\${meta.title} <span class="text-xs text-gray-500 font-mono ml-2">(\${key})</span></div>
-                                    <div class="text-sm text-gray-400">\${meta.desc}</div>
-                                </div>
-                            </div>
-                            <div class="relative inline-block w-12 ml-2 align-middle select-none transition duration-200 ease-in">
-                                <input type="checkbox" name="tool_\${key}" id="tool_\${key}" \${tools[key] ? 'checked' : ''} class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                                <label for="tool_\${key}" class="toggle-label block overflow-hidden h-6 rounded-full cursor-pointer"></label>
-                            </div>
-                        </div>
-                    \`;
+                    const checkedStr = tools[key] ? 'checked' : '';
+                    const html = '<div class="flex items-center justify-between p-4 bg-gray-900/40 rounded-xl hover:bg-gray-800/60 transition-colors">' +
+                        '<div class="flex items-start">' +
+                            '<div class="mt-1.5 mr-3 w-2.5 h-2.5 rounded-full ' + dotColor + ' shadow-[0_0_8px_rgba(255,255,255,0.2)]"></div>' +
+                            '<div>' +
+                                '<div class="text-white font-medium">' + meta.title + ' <span class="text-xs text-gray-500 font-mono ml-2">(' + key + ')</span></div>' +
+                                '<div class="text-sm text-gray-400">' + meta.desc + '</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="relative inline-block w-12 ml-2 align-middle select-none transition duration-200 ease-in">' +
+                            '<input type="checkbox" name="tool_' + key + '" id="tool_' + key + '" ' + checkedStr + ' class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>' +
+                            '<label for="tool_' + key + '" class="toggle-label block overflow-hidden h-6 rounded-full cursor-pointer"></label>' +
+                        '</div>' +
+                    '</div>';
                     toolsContainer.insertAdjacentHTML('beforeend', html);
                 });
 
