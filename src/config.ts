@@ -107,6 +107,9 @@ export class ConfigManager {
     if (newConfig.search) {
       this.config.search = { ...this.config.search, ...newConfig.search };
     }
+    if (newConfig.security) {
+      this.config.security = { ...this.config.security, ...newConfig.security };
+    }
     await this.save();
     return this.config;
   }

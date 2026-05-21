@@ -90,10 +90,16 @@ export const ADMIN_HTML = `
             <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <svg class="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
             </div>
-            <h2 class="text-xl font-bold mb-2 flex items-center text-emerald-400">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
-                Your AI Connection URL
-            </h2>
+            <div class="flex justify-between items-start mb-2">
+                <h2 class="text-xl font-bold flex items-center text-emerald-400">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                    Your AI Connection URL
+                </h2>
+                <button id="regenerateBtn" type="button" class="text-xs text-emerald-400/70 hover:text-emerald-400 flex items-center transition-colors px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-md border border-emerald-500/20">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Regenerate
+                </button>
+            </div>
             <p class="text-gray-400 text-sm mb-4 pr-12">Copy this URL and paste it into your MCP client (Grok, Claude Desktop, Cursor) to securely connect to your Memos.</p>
             
             <div class="flex items-center bg-gray-950/80 rounded-xl p-1 border border-gray-700 shadow-inner group/input">
@@ -103,10 +109,40 @@ export const ADMIN_HTML = `
                     Copy
                 </button>
             </div>
-            <p class="text-xs text-rose-400/80 mt-3 flex items-center font-medium">
+            <p class="text-xs text-rose-400/80 mt-3 flex items-center font-medium mb-4">
                 <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
                 Treat this URL like a password. Do not share it publicly.
             </p>
+
+            <!-- Cheat Sheet -->
+            <details class="text-sm border-t border-gray-700/50 pt-3 mt-2">
+                <summary class="text-gray-400 cursor-pointer hover:text-gray-200 transition-colors font-medium flex items-center outline-none">
+                    <svg class="w-4 h-4 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Advanced Client Setup (Cheat Sheet)
+                </summary>
+                <div class="mt-3 bg-gray-900/50 rounded-lg p-4 border border-gray-700 font-mono text-xs text-gray-300 space-y-2">
+                    <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2">
+                        <span class="text-gray-500">Protocol type</span>
+                        <span class="col-span-2 text-emerald-400">SSE (Server-Sent Events)</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2 pt-1">
+                        <span class="text-gray-500">Base URL</span>
+                        <span class="col-span-2" id="cheatBaseUrl">...</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2 pt-1">
+                        <span class="text-gray-500">Auth Method</span>
+                        <span class="col-span-2">API Key / Bearer Token</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2 pt-1">
+                        <span class="text-gray-500">Token Key</span>
+                        <span class="col-span-2 text-rose-300" id="cheatToken">...</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 pt-1">
+                        <span class="text-gray-500">Custom Header</span>
+                        <span class="col-span-2 text-gray-400">Authorization: Bearer <span class="text-rose-300" id="cheatHeaderToken">...</span></span>
+                    </div>
+                </div>
+            </details>
         </div>
 
         <!-- Notification Toast -->
@@ -261,6 +297,31 @@ export const ADMIN_HTML = `
             }, 2000);
         });
 
+        // Regenerate Token Logic
+        document.getElementById('regenerateBtn').addEventListener('click', async () => {
+            if (!confirm("Are you sure you want to regenerate your secure token? All existing AI clients will be instantly disconnected and will require the new URL.")) return;
+            
+            try {
+                const regenUrl = getApiUrl().replace('/config', '/regenerate-token');
+                const res = await fetch(regenUrl, {
+                    method: 'POST',
+                    headers: getHeaders()
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast("Token regenerated successfully");
+                        loadConfig(); // Reload everything to update UI
+                    }
+                } else {
+                    alert("Failed to regenerate token.");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error regenerating token.");
+            }
+        });
+
         // Fetch current config
         async function loadConfig() {
             try {
@@ -278,10 +339,13 @@ export const ADMIN_HTML = `
                 hideLogin();
                 const config = await res.json();
                 
-                // Set Client URL
+                // Set Client URL & Cheat Sheet
                 const baseUrl = window.location.origin + window.location.pathname.replace(new RegExp('/admin/?$'), '');
                 const clientToken = config.security && config.security.client_token ? config.security.client_token : 'MISSING_TOKEN';
                 document.getElementById('clientUrlInput').value = baseUrl + '/sse?token=' + clientToken;
+                document.getElementById('cheatBaseUrl').textContent = baseUrl + '/sse';
+                document.getElementById('cheatToken').textContent = clientToken;
+                document.getElementById('cheatHeaderToken').textContent = clientToken;
                 
                 // Render Tools
                 toolsContainer.innerHTML = '';

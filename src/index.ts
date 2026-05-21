@@ -5,6 +5,7 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import crypto from "crypto";
 import { createMemosMcpServer } from "./server.js";
 import { ConfigManager } from "./config.js";
 import { ADMIN_HTML } from "./adminHtml.js";
@@ -163,6 +164,17 @@ if (isSseMode) {
     }
   });
 
+  app.post(["/admin/api/regenerate-token", "*/admin/api/regenerate-token"], adminAuth, async (req, res) => {
+    try {
+      const newToken = "acks_" + crypto.randomBytes(16).toString("hex");
+      const config = configManager.getConfig();
+      const updated = await configManager.update({ security: { ...config.security, client_token: newToken } });
+      res.json({ success: true, token: newToken });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get(["/admin/api/engine-status", "*/admin/api/engine-status"], adminAuth, async (req, res) => {
     const { globalVectorEngine } = await import('./vectorEngine.js');
     res.json({ ready: globalVectorEngine.isReady() });
@@ -235,6 +247,17 @@ if (isSseMode) {
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  adminApp.post(["/admin/api/regenerate-token", "*/admin/api/regenerate-token"], adminAuth, async (req, res) => {
+    try {
+      const newToken = "acks_" + crypto.randomBytes(16).toString("hex");
+      const config = configManager.getConfig();
+      await configManager.update({ security: { ...config.security, client_token: newToken } });
+      res.json({ success: true, token: newToken });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
     }
   });
 
