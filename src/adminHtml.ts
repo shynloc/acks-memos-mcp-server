@@ -279,7 +279,7 @@ export const ADMIN_HTML = `
                 const config = await res.json();
                 
                 // Set Client URL
-                const baseUrl = window.location.origin + window.location.pathname.replace(/\/admin\/?$/, '');
+                const baseUrl = window.location.origin + window.location.pathname.replace(new RegExp('/admin/?$'), '');
                 const clientToken = config.security && config.security.client_token ? config.security.client_token : 'MISSING_TOKEN';
                 document.getElementById('clientUrlInput').value = baseUrl + '/sse?token=' + clientToken;
                 
