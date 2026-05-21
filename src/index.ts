@@ -94,7 +94,7 @@ if (isSseMode) {
   });
 
   // Serve the Web Admin Panel UI
-  app.get("/admin", (req, res) => {
+  app.get(["/admin", "*/admin"], (req, res) => {
     res.send(ADMIN_HTML);
   });
 
@@ -117,18 +117,17 @@ if (isSseMode) {
   };
 
   // Admin API endpoints (SSE mode)
-  app.get("/admin/api/config", adminAuth, (req, res) => {
+  app.get(["/admin/api/config", "*/admin/api/config"], adminAuth, (req, res) => {
     res.json(configManager.getConfig());
   });
   
-  app.post("/admin/api/config", adminAuth, async (req, res) => {
+  app.post(["/admin/api/config", "*/admin/api/config"], adminAuth, async (req, res) => {
     try {
       const oldConfig = configManager.getConfig();
       const updated = await configManager.update(req.body);
       
       // If vector search was just turned on, trigger the pre-download process immediately
       if (!oldConfig.search.enable_vector_search && updated.search.enable_vector_search) {
-        // We import globalVectorEngine dynamically to avoid circular dependencies if any
         import('./vectorEngine.js').then(({ globalVectorEngine }) => {
           globalVectorEngine.init().catch(e => console.error("[Pre-Download Error]", e));
         });
@@ -140,7 +139,7 @@ if (isSseMode) {
     }
   });
 
-  app.get("/admin/api/engine-status", adminAuth, async (req, res) => {
+  app.get(["/admin/api/engine-status", "*/admin/api/engine-status"], adminAuth, async (req, res) => {
     const { globalVectorEngine } = await import('./vectorEngine.js');
     res.json({ ready: globalVectorEngine.isReady() });
   });
@@ -172,7 +171,7 @@ if (isSseMode) {
   adminApp.use(express.json());
   
   // Serve the Web Admin Panel UI
-  adminApp.get("/admin", (req, res) => {
+  adminApp.get(["/admin", "*/admin"], (req, res) => {
     res.send(ADMIN_HTML);
   });
   
@@ -194,11 +193,11 @@ if (isSseMode) {
     next();
   };
 
-  adminApp.get("/admin/api/config", adminAuth, (req, res) => {
+  adminApp.get(["/admin/api/config", "*/admin/api/config"], adminAuth, (req, res) => {
     res.json(configManager.getConfig());
   });
   
-  adminApp.post("/admin/api/config", adminAuth, async (req, res) => {
+  adminApp.post(["/admin/api/config", "*/admin/api/config"], adminAuth, async (req, res) => {
     try {
       const oldConfig = configManager.getConfig();
       const updated = await configManager.update(req.body);
@@ -215,7 +214,7 @@ if (isSseMode) {
     }
   });
 
-  adminApp.get("/admin/api/engine-status", adminAuth, async (req, res) => {
+  adminApp.get(["/admin/api/engine-status", "*/admin/api/engine-status"], adminAuth, async (req, res) => {
     const { globalVectorEngine } = await import('./vectorEngine.js');
     res.json({ ready: globalVectorEngine.isReady() });
   });
