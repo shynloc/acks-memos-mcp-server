@@ -35,9 +35,31 @@ if (isSseMode) {
     res.json({ status: "healthy", service: "acks-memos-mcp-server" });
   });
 
+  // Client Auth Middleware for SSE endpoints
+  const clientAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const expectedToken = process.env.MCP_CLIENT_TOKEN;
+    if (!expectedToken) {
+      // If no token is configured in .env, allow access (useful for local dev), 
+      // but warn in console.
+      console.warn("WARNING: MCP_CLIENT_TOKEN is not set. SSE endpoints are exposed publicly!");
+      return next();
+    }
+
+    // Check token from query param (?token=xyz) or Authorization header (Bearer xyz)
+    const providedToken = req.query.token || req.headers.authorization?.replace(/^Bearer\s+/i, '');
+
+    if (providedToken !== expectedToken) {
+      console.error(`[Security] Blocked unauthorized access attempt to ${req.path} from IP: ${req.ip}`);
+      res.status(401).json({ error: "Unauthorized: Invalid or missing client token." });
+      return;
+    }
+    
+    next();
+  };
+
   // Handle SSE Connection
   // Supports wildcard paths so that it works with or without path prefixes (e.g. /sse, /mcp/sse)
-  app.get("*/sse", async (req, res) => {
+  app.get("*/sse", clientAuth, async (req, res) => {
     const reqPath = req.path; // e.g. "/sse" or "/mcp/sse"
     const prefix = reqPath.substring(0, reqPath.lastIndexOf("/sse"));
     const messagesPath = `${prefix}/messages`;
@@ -69,7 +91,7 @@ if (isSseMode) {
   });
 
   // Handle incoming messages
-  app.post("*/messages", async (req, res) => {
+  app.post("*/messages", clientAuth, async (req, res) => {
     const sessionId = req.query.sessionId as string;
     if (!sessionId) {
       res.status(400).send("Missing sessionId query parameter");
