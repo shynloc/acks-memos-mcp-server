@@ -277,12 +277,23 @@ export function createMemosMcpServer(): Server {
 
         case "search_memos": {
           const { query, limit } = args as { query: string; limit?: number };
-          // Always fetch a large batch for thorough searching
-          const response = await client.listMemos(200);
           
-          // Filter memos client-side for highest reliability and simple substring matching
+          // Paginate through all memos (up to 1000) for thorough searching
+          const allMemos: Array<{ name: string; content: string; visibility: string; createTime?: string; updateTime?: string }> = [];
+          let searchPageToken: string | undefined;
+          const maxSearchMemos = 1000;
+
+          do {
+            const page = await client.listMemos(200, searchPageToken);
+            if (page.memos && Array.isArray(page.memos)) {
+              allMemos.push(...page.memos);
+            }
+            searchPageToken = page.nextPageToken;
+          } while (searchPageToken && allMemos.length < maxSearchMemos);
+
+          // Filter client-side for substring matching
           const lowerQuery = query.toLowerCase();
-          const filteredMemos = (response.memos || []).filter((memo) =>
+          const filteredMemos = allMemos.filter((memo) =>
             memo.content.toLowerCase().includes(lowerQuery)
           );
 

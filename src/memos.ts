@@ -1,5 +1,3 @@
-
-
 export interface Memo {
   name: string; // e.g., "memos/123"
   content: string;
