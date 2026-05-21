@@ -27,6 +27,39 @@ if (isSseMode) {
   
   // Express raw/json body parsing
   app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // Mock OAuth2 endpoints to satisfy strict enterprise clients like Grok
+  app.get(["/mcp/authorize", "*/authorize"], (req, res) => {
+    const { client_id, redirect_uri, state } = req.query;
+    const expectedToken = configManager.getConfig().security?.client_token || process.env.MCP_CLIENT_TOKEN;
+    
+    // We creatively use the client_id field to accept the secret token
+    if (client_id !== expectedToken) {
+      res.status(401).send("Unauthorized: Invalid Client ID. Please use your secure Token as the Client ID.");
+      return;
+    }
+    if (!redirect_uri) {
+      res.status(400).send("Missing redirect_uri");
+      return;
+    }
+
+    const authCode = "mock_auth_code_" + Date.now();
+    const redirectUrl = new URL(redirect_uri as string);
+    redirectUrl.searchParams.set("code", authCode);
+    if (state) redirectUrl.searchParams.set("state", state as string);
+    
+    res.redirect(redirectUrl.toString());
+  });
+
+  app.post(["/mcp/token", "*/token"], (req, res) => {
+    const expectedToken = configManager.getConfig().security?.client_token || process.env.MCP_CLIENT_TOKEN;
+    res.json({
+      access_token: expectedToken,
+      token_type: "Bearer",
+      expires_in: 31536000 // 1 year
+    });
+  });
 
   // Active transports map (keyed by sessionId)
   const transports = new Map<string, SSEServerTransport>();
