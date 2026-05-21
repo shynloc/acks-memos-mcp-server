@@ -7,6 +7,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { createMemosMcpServer } from "./server.js";
 import { ConfigManager } from "./config.js";
+import { ADMIN_HTML } from "./adminHtml.js";
 
 dotenv.config();
 
@@ -92,6 +93,11 @@ if (isSseMode) {
     }
   });
 
+  // Serve the Web Admin Panel UI
+  app.get("/admin", (req, res) => {
+    res.send(ADMIN_HTML);
+  });
+
   // Admin API endpoints (SSE mode)
   app.get("/admin/api/config", (req, res) => {
     res.json(configManager.getConfig());
@@ -131,6 +137,11 @@ if (isSseMode) {
   const adminApp = express();
   adminApp.use(cors());
   adminApp.use(express.json());
+  
+  // Serve the Web Admin Panel UI
+  adminApp.get("/admin", (req, res) => {
+    res.send(ADMIN_HTML);
+  });
   
   adminApp.get("/admin/api/config", (req, res) => {
     res.json(configManager.getConfig());
