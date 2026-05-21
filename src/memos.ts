@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
 
-dotenv.config();
 
 export interface Memo {
   name: string; // e.g., "memos/123"
@@ -181,27 +179,33 @@ export class MemosClient {
   }
 
   /**
-   * Extract tags from recent memos on the client side
+   * Extract tags from all memos on the client side (paginated)
    */
   async listTags(): Promise<string[]> {
-    // Fetch a large page (e.g., 200 memos) to extract tags
-    const response = await this.listMemos(200);
     const tags = new Set<string>();
     
     // Regular expression for hashtags (e.g., #tag, #work/subwork)
     // Matches # followed by word chars, Han characters, or slashes (sub-tags)
     const tagRegex = /#([a-zA-Z0-9_\u4e00-\u9fa5]+(\/[a-zA-Z0-9_\u4e00-\u9fa5]+)*)/g;
 
-    if (response.memos && Array.isArray(response.memos)) {
-      for (const memo of response.memos) {
-        let match;
-        // Reset regex index
-        tagRegex.lastIndex = 0;
-        while ((match = tagRegex.exec(memo.content)) !== null) {
-          tags.add(match[1]); // match[1] contains the tag without '#'
+    let pageToken: string | undefined;
+    let totalFetched = 0;
+    const maxMemos = 1000; // Safety cap
+
+    do {
+      const response = await this.listMemos(200, pageToken);
+      if (response.memos && Array.isArray(response.memos)) {
+        for (const memo of response.memos) {
+          tagRegex.lastIndex = 0;
+          let match;
+          while ((match = tagRegex.exec(memo.content)) !== null) {
+            tags.add(match[1]);
+          }
         }
+        totalFetched += response.memos.length;
       }
-    }
+      pageToken = response.nextPageToken;
+    } while (pageToken && totalFetched < maxMemos);
 
     return Array.from(tags).sort();
   }

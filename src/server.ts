@@ -11,7 +11,7 @@ export function createMemosMcpServer(): Server {
   const server = new Server(
     {
       name: "acks-memos-mcp-server",
-      version: "1.0.0",
+      version: "1.0.1",
     },
     {
       capabilities: {
@@ -277,7 +277,8 @@ export function createMemosMcpServer(): Server {
 
         case "search_memos": {
           const { query, limit } = args as { query: string; limit?: number };
-          const response = await client.listMemos(limit || 100);
+          // Always fetch a large batch for thorough searching
+          const response = await client.listMemos(200);
           
           // Filter memos client-side for highest reliability and simple substring matching
           const lowerQuery = query.toLowerCase();
@@ -285,11 +286,15 @@ export function createMemosMcpServer(): Server {
             memo.content.toLowerCase().includes(lowerQuery)
           );
 
+          // Apply limit to the filtered results (default 50)
+          const maxResults = limit || 50;
+          const truncatedMemos = filteredMemos.slice(0, maxResults);
+
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify({ memos: filteredMemos }, null, 2),
+                text: JSON.stringify({ memos: truncatedMemos, totalMatches: filteredMemos.length }, null, 2),
               },
             ],
           };

@@ -33,7 +33,7 @@ Ensure you have **Node.js (>= 18)** installed.
 
 ### 1. Build from Source
 ```bash
-git clone https://github.com/your-username/acks-memos-mcp-server.git
+git clone https://github.com/shynloc/acks-memos-mcp-server.git
 cd acks-memos-mcp-server
 npm install
 npm run build

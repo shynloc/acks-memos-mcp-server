@@ -1,12 +1,20 @@
 {
   "name": "acks-memos-mcp-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "ACKS Memos MCP Server - Connect Memos to AI Agents using Model Context Protocol",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
     "acks-memos-mcp-server": "./dist/index.js"
   },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shynloc/acks-memos-mcp-server.git"
+  },
+  "homepage": "https://github.com/shynloc/acks-memos-mcp-server",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",

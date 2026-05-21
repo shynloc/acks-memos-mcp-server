@@ -21,8 +21,6 @@ if (isSseMode) {
   // Express raw/json body parsing
   app.use(express.json());
 
-  const server = createMemosMcpServer();
-  
   // Active transports map (keyed by sessionId)
   const transports = new Map<string, SSEServerTransport>();
 
@@ -44,9 +42,13 @@ if (isSseMode) {
     const sessionId = transport.sessionId;
     transports.set(sessionId, transport);
 
+    // Create a dedicated MCP Server instance for this session to avoid multi-client conflicts
+    const server = createMemosMcpServer();
+
     res.on("close", () => {
       console.error(`SSE connection closed for session: ${sessionId}`);
       transports.delete(sessionId);
+      server.close().catch(() => {});
     });
 
     try {
