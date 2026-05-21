@@ -142,6 +142,22 @@ export const ADMIN_HTML = `
                         </div>
                     </div>
                 </div>
+
+                <!-- Live Status Indicator (Injected by JS) -->
+                <div id="engineStatusIndicator" class="mt-5 hidden p-5 bg-gray-950/80 rounded-xl border border-gray-700 shadow-inner">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-semibold text-brand-400 flex items-center" id="engineStatusText">
+                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-brand-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            Downloading Neural Weights & Initializing...
+                        </span>
+                        <span class="text-xs text-gray-500 font-mono" id="engineStatusTime">Usually takes 1-2 mins</span>
+                    </div>
+                    <div class="w-full bg-gray-800 rounded-full h-2 overflow-hidden shadow-inner">
+                        <div id="engineProgressBar" class="bg-gradient-to-r from-brand-600 to-brand-400 h-2 rounded-full w-1/3 relative overflow-hidden transition-all duration-1000">
+                           <div class="absolute top-0 left-0 bottom-0 right-0 w-full animate-[ping_1.5s_ease-in-out_infinite] bg-white opacity-20"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Submit -->
@@ -260,6 +276,11 @@ export const ADMIN_HTML = `
                 // Render Search Engine
                 searchEngineToggle.checked = config.search?.enable_vector_search === true;
                 
+                // If it's already checked on load, verify the status
+                if (searchEngineToggle.checked) {
+                    checkEngineStatus();
+                }
+                
             } catch (err) {
                 console.error("Failed to load config", err);
                 alert("Failed to connect to the MCP server. Is it running?");
@@ -273,6 +294,45 @@ export const ADMIN_HTML = `
                 toast.classList.remove('translate-y-0', 'opacity-100');
                 toast.classList.add('translate-y-[-150%]', 'opacity-0');
             }, 3000);
+        }
+
+        let pollInterval = null;
+        async function checkEngineStatus() {
+            try {
+                const statusUrl = getApiUrl().replace('/config', '/engine-status');
+                const res = await fetch(statusUrl, { headers: getHeaders() });
+                if (!res.ok) return;
+                
+                const { ready } = await res.json();
+                const statusDiv = document.getElementById('engineStatusIndicator');
+                const isToggleChecked = document.getElementById('search-engine-toggle').checked;
+                
+                if (isToggleChecked) {
+                    statusDiv.classList.remove('hidden');
+                    if (ready) {
+                        document.getElementById('engineStatusText').innerHTML = '<svg class="w-4 h-4 mr-1 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Engine Ready & Active';
+                        document.getElementById('engineStatusText').className = "text-sm font-semibold text-emerald-400 flex items-center";
+                        document.getElementById('engineProgressBar').className = 'bg-emerald-500 h-2 rounded-full w-full shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all duration-500';
+                        document.getElementById('engineProgressBar').innerHTML = '';
+                        document.getElementById('engineStatusTime').innerText = 'Online';
+                        if (pollInterval) clearInterval(pollInterval);
+                    } else {
+                        // Keep polling
+                        document.getElementById('engineStatusText').innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-brand-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Downloading Neural Weights & Initializing...';
+                        document.getElementById('engineStatusText').className = "text-sm font-semibold text-brand-400 flex items-center";
+                        document.getElementById('engineProgressBar').className = 'bg-gradient-to-r from-brand-600 to-brand-400 h-2 rounded-full w-2/3 relative overflow-hidden transition-all duration-1000';
+                        document.getElementById('engineStatusTime').innerText = 'Usually takes 1-2 mins';
+                        if (!pollInterval) {
+                            pollInterval = setInterval(checkEngineStatus, 2000);
+                        }
+                    }
+                } else {
+                    statusDiv.classList.add('hidden');
+                    if (pollInterval) clearInterval(pollInterval);
+                }
+            } catch (err) {
+                console.error("Polling error", err);
+            }
         }
 
         // Save Config
@@ -306,6 +366,13 @@ export const ADMIN_HTML = `
                 });
                 if (res.ok) {
                     showToast();
+                    // If Vector search was enabled, start polling for status
+                    if (searchEngineToggle.checked) {
+                        checkEngineStatus();
+                    } else {
+                        document.getElementById('engineStatusIndicator').classList.add('hidden');
+                        if (pollInterval) clearInterval(pollInterval);
+                    }
                 } else {
                     const err = await res.json();
                     alert("Error saving: " + err.error);

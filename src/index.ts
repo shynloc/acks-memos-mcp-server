@@ -123,11 +123,26 @@ if (isSseMode) {
   
   app.post("/admin/api/config", adminAuth, async (req, res) => {
     try {
+      const oldConfig = configManager.getConfig();
       const updated = await configManager.update(req.body);
+      
+      // If vector search was just turned on, trigger the pre-download process immediately
+      if (!oldConfig.search.enable_vector_search && updated.search.enable_vector_search) {
+        // We import globalVectorEngine dynamically to avoid circular dependencies if any
+        import('./vectorEngine.js').then(({ globalVectorEngine }) => {
+          globalVectorEngine.init().catch(e => console.error("[Pre-Download Error]", e));
+        });
+      }
+      
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
+  });
+
+  app.get("/admin/api/engine-status", adminAuth, async (req, res) => {
+    const { globalVectorEngine } = await import('./vectorEngine.js');
+    res.json({ ready: globalVectorEngine.isReady() });
   });
 
   const port = parseInt(process.env.PORT || "3000", 10);
@@ -185,11 +200,24 @@ if (isSseMode) {
   
   adminApp.post("/admin/api/config", adminAuth, async (req, res) => {
     try {
+      const oldConfig = configManager.getConfig();
       const updated = await configManager.update(req.body);
+      
+      if (!oldConfig.search.enable_vector_search && updated.search.enable_vector_search) {
+        import('./vectorEngine.js').then(({ globalVectorEngine }) => {
+          globalVectorEngine.init().catch(e => console.error("[Pre-Download Error]", e));
+        });
+      }
+      
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
+  });
+
+  adminApp.get("/admin/api/engine-status", adminAuth, async (req, res) => {
+    const { globalVectorEngine } = await import('./vectorEngine.js');
+    res.json({ ready: globalVectorEngine.isReady() });
   });
 
   const adminPort = parseInt(process.env.ADMIN_PORT || "3001", 10);
