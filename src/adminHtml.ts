@@ -115,32 +115,55 @@ export const ADMIN_HTML = `
             </p>
 
             <!-- Cheat Sheet -->
-            <details class="text-sm border-t border-gray-700/50 pt-3 mt-2">
+            <details class="text-sm border-t border-gray-700/50 pt-3 mt-2 group/details">
                 <summary class="text-gray-400 cursor-pointer hover:text-gray-200 transition-colors font-medium flex items-center outline-none">
-                    <svg class="w-4 h-4 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <svg class="w-4 h-4 mr-1 inline-block transition-transform group-open/details:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                     Advanced Client Setup (Cheat Sheet)
                 </summary>
-                <div class="mt-3 bg-gray-900/50 rounded-lg p-4 border border-gray-700 font-mono text-xs text-gray-300 space-y-2">
-                    <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2">
-                        <span class="text-gray-500">Protocol type</span>
-                        <span class="col-span-2 text-emerald-400">SSE (Server-Sent Events)</span>
+                <div class="mt-3 bg-gray-900/50 rounded-lg p-4 border border-gray-700 font-mono text-xs text-gray-300 space-y-4">
+                    
+                    <!-- Standard Setup -->
+                    <div>
+                        <h4 class="text-emerald-400 font-bold mb-2 uppercase tracking-wider text-[10px]">Standard Setup (Claude, Cursor, Windsurf)</h4>
+                        <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2">
+                            <span class="text-gray-500">Base URL</span>
+                            <span class="col-span-2" id="cheatBaseUrl">...</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2 pt-1">
+                            <span class="text-gray-500">Auth Method</span>
+                            <span class="col-span-2">API Key / Bearer Token</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 pt-1">
+                            <span class="text-gray-500">Token Key</span>
+                            <span class="col-span-2 text-rose-300" id="cheatToken">...</span>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2 pt-1">
-                        <span class="text-gray-500">Base URL</span>
-                        <span class="col-span-2" id="cheatBaseUrl">...</span>
+
+                    <!-- Strict Client Setup -->
+                    <div class="pt-2">
+                        <h4 class="text-blue-400 font-bold mb-2 uppercase tracking-wider text-[10px]">Strict Clients / OAuth 2.0 (Grok)</h4>
+                        <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2">
+                            <span class="text-gray-500">URL</span>
+                            <span class="col-span-2" id="cheatStrictUrl">...</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2 pt-1">
+                            <span class="text-gray-500">Client ID</span>
+                            <span class="col-span-2 text-rose-300" id="cheatClientId">...</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2 pt-1">
+                            <span class="text-gray-500">Auth Endpoint</span>
+                            <span class="col-span-2" id="cheatAuthUrl">...</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2 pt-1">
+                            <span class="text-gray-500">Token Endpoint</span>
+                            <span class="col-span-2" id="cheatTokenUrl">...</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 pt-1">
+                            <span class="text-gray-500">Auth Method</span>
+                            <span class="col-span-2">None (PKCE only)</span>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2 pt-1">
-                        <span class="text-gray-500">Auth Method</span>
-                        <span class="col-span-2">API Key / Bearer Token</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2 border-b border-gray-800 pb-2 pt-1">
-                        <span class="text-gray-500">Token Key</span>
-                        <span class="col-span-2 text-rose-300" id="cheatToken">...</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2 pt-1">
-                        <span class="text-gray-500">Custom Header</span>
-                        <span class="col-span-2 text-gray-400">Authorization: Bearer <span class="text-rose-300" id="cheatHeaderToken">...</span></span>
-                    </div>
+
                 </div>
             </details>
         </div>
@@ -343,9 +366,16 @@ export const ADMIN_HTML = `
                 const baseUrl = window.location.origin + window.location.pathname.replace(new RegExp('/admin/?$'), '');
                 const clientToken = config.security && config.security.client_token ? config.security.client_token : 'MISSING_TOKEN';
                 document.getElementById('clientUrlInput').value = baseUrl + '/sse/' + clientToken;
+                
+                // Standard Setup
                 document.getElementById('cheatBaseUrl').textContent = baseUrl + '/sse/' + clientToken;
                 document.getElementById('cheatToken').textContent = clientToken;
-                document.getElementById('cheatHeaderToken').textContent = clientToken;
+                
+                // Strict Client Setup
+                document.getElementById('cheatStrictUrl').textContent = baseUrl + '/sse';
+                document.getElementById('cheatClientId').textContent = clientToken;
+                document.getElementById('cheatAuthUrl').textContent = baseUrl + '/authorize';
+                document.getElementById('cheatTokenUrl').textContent = baseUrl + '/token';
                 
                 // Render Tools
                 toolsContainer.innerHTML = '';
