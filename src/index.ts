@@ -98,12 +98,30 @@ if (isSseMode) {
     res.send(ADMIN_HTML);
   });
 
+  // Simple Auth Middleware for Admin APIs
+  const adminAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const expected = process.env.ADMIN_PASSWORD;
+    const provided = req.headers['x-admin-password'];
+    
+    if (!expected) {
+      res.status(500).json({ error: "Server misconfiguration: ADMIN_PASSWORD environment variable is not set." });
+      return;
+    }
+    
+    if (provided !== expected) {
+      res.status(401).json({ error: "Unauthorized: Invalid admin password." });
+      return;
+    }
+    
+    next();
+  };
+
   // Admin API endpoints (SSE mode)
-  app.get("/admin/api/config", (req, res) => {
+  app.get("/admin/api/config", adminAuth, (req, res) => {
     res.json(configManager.getConfig());
   });
   
-  app.post("/admin/api/config", async (req, res) => {
+  app.post("/admin/api/config", adminAuth, async (req, res) => {
     try {
       const updated = await configManager.update(req.body);
       res.json(updated);
@@ -143,11 +161,29 @@ if (isSseMode) {
     res.send(ADMIN_HTML);
   });
   
-  adminApp.get("/admin/api/config", (req, res) => {
+  // Simple Auth Middleware for Admin APIs
+  const adminAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const expected = process.env.ADMIN_PASSWORD;
+    const provided = req.headers['x-admin-password'];
+    
+    if (!expected) {
+      res.status(500).json({ error: "Server misconfiguration: ADMIN_PASSWORD environment variable is not set." });
+      return;
+    }
+    
+    if (provided !== expected) {
+      res.status(401).json({ error: "Unauthorized: Invalid admin password." });
+      return;
+    }
+    
+    next();
+  };
+
+  adminApp.get("/admin/api/config", adminAuth, (req, res) => {
     res.json(configManager.getConfig());
   });
   
-  adminApp.post("/admin/api/config", async (req, res) => {
+  adminApp.post("/admin/api/config", adminAuth, async (req, res) => {
     try {
       const updated = await configManager.update(req.body);
       res.json(updated);

@@ -47,10 +47,38 @@ export const ADMIN_HTML = `
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        
+        .blur-sm {
+            filter: blur(8px);
+            transition: filter 0.3s ease;
+        }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen font-sans selection:bg-brand-500 selection:text-white">
-    <div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Login Overlay -->
+    <div id="loginOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80 backdrop-blur-md hidden">
+        <div class="glass-panel p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/20 mb-4">
+                    <svg class="w-8 h-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-white">Admin Access</h2>
+                <p class="text-gray-400 mt-2 text-sm">Please enter the security password to manage MCP permissions.</p>
+            </div>
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <input type="password" id="adminPassword" required placeholder="Enter password..." class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors">
+                    <p id="loginError" class="text-red-500 text-sm mt-2 hidden">Invalid password. Please try again.</p>
+                </div>
+                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 focus:outline-none">
+                    Unlock Panel
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="mainContent" class="max-w-4xl mx-auto px-4 py-12 transition-all duration-300">
         <!-- Header -->
         <div class="mb-10 text-center">
             <h1 class="text-4xl font-extrabold tracking-tight mb-2 bg-gradient-to-r from-brand-500 to-pink-500 text-transparent bg-clip-text">ACKS Memos MCP</h1>
@@ -152,10 +180,47 @@ export const ADMIN_HTML = `
             return cleanPath + '/api/config';
         };
 
+        const getHeaders = () => {
+            return {
+                'Content-Type': 'application/json',
+                'x-admin-password': localStorage.getItem('adminPassword') || ''
+            };
+        };
+
+        const showLogin = () => {
+            document.getElementById('loginOverlay').classList.remove('hidden');
+            document.getElementById('mainContent').classList.add('blur-sm');
+        };
+
+        const hideLogin = () => {
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('blur-sm');
+            document.getElementById('loginError').classList.add('hidden');
+        };
+
+        // Login Handler
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const pwd = document.getElementById('adminPassword').value;
+            localStorage.setItem('adminPassword', pwd);
+            loadConfig();
+        });
+
         // Fetch current config
         async function loadConfig() {
             try {
-                const res = await fetch(getApiUrl());
+                const res = await fetch(getApiUrl(), { headers: getHeaders() });
+                
+                if (res.status === 401 || res.status === 500) {
+                    showLogin();
+                    if (localStorage.getItem('adminPassword')) {
+                        document.getElementById('loginError').classList.remove('hidden');
+                        localStorage.removeItem('adminPassword');
+                    }
+                    return;
+                }
+                
+                hideLogin();
                 const config = await res.json();
                 
                 // Render Tools
@@ -236,7 +301,7 @@ export const ADMIN_HTML = `
             try {
                 const res = await fetch(getApiUrl(), {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getHeaders(),
                     body: JSON.stringify(newConfig)
                 });
                 if (res.ok) {
